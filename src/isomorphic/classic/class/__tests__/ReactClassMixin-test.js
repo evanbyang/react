@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -10,8 +10,6 @@
  */
 
 'use strict';
-
-var mocks = require('mocks');
 
 var React;
 var ReactTestUtils;
@@ -27,8 +25,8 @@ describe('ReactClass-mixin', function() {
   beforeEach(function() {
     React = require('React');
     ReactTestUtils = require('ReactTestUtils');
-    mixinPropValidator = mocks.getMockFunction();
-    componentPropValidator = mocks.getMockFunction();
+    mixinPropValidator = jest.fn();
+    componentPropValidator = jest.fn();
 
     var MixinA = {
       propTypes: {
@@ -109,7 +107,7 @@ describe('ReactClass-mixin', function() {
   });
 
   it('should support merging propTypes and statics', function() {
-    var listener = mocks.getMockFunction();
+    var listener = jest.fn();
     var instance = <TestComponent listener={listener} />;
     instance = ReactTestUtils.renderIntoDocument(instance);
 
@@ -124,7 +122,7 @@ describe('ReactClass-mixin', function() {
   });
 
   it('should support chaining delegate functions', function() {
-    var listener = mocks.getMockFunction();
+    var listener = jest.fn();
     var instance = <TestComponent listener={listener} />;
     instance = ReactTestUtils.renderIntoDocument(instance);
 
@@ -137,7 +135,7 @@ describe('ReactClass-mixin', function() {
   });
 
   it('should chain functions regardless of spec property order', function() {
-    var listener = mocks.getMockFunction();
+    var listener = jest.fn();
     var instance = <TestComponentWithReverseSpec listener={listener} />;
     instance = ReactTestUtils.renderIntoDocument(instance);
 
@@ -157,12 +155,12 @@ describe('ReactClass-mixin', function() {
 
   it('should override mixin prop types with class prop types', function() {
     // Sanity check...
-    expect(componentPropValidator).toNotBe(mixinPropValidator);
+    expect(componentPropValidator).not.toBe(mixinPropValidator);
     // Actually check...
     expect(TestComponentWithPropTypes.propTypes)
       .toBeDefined();
     expect(TestComponentWithPropTypes.propTypes.value)
-      .toNotBe(mixinPropValidator);
+      .not.toBe(mixinPropValidator);
     expect(TestComponentWithPropTypes.propTypes.value)
       .toBe(componentPropValidator);
   });
@@ -207,12 +205,11 @@ describe('ReactClass-mixin', function() {
     var instance = <Component />;
     expect(function() {
       instance = ReactTestUtils.renderIntoDocument(instance);
-    }).toThrow(
-      'Invariant Violation: mergeIntoWithNoDuplicateKeys(): ' +
-      'Tried to merge two objects with the same key: `x`. This conflict ' +
-      'may be due to a mixin; in particular, this may be caused by two ' +
-      'getInitialState() or getDefaultProps() methods returning objects ' +
-      'with clashing keys.'
+    }).toThrowError(
+      'mergeIntoWithNoDuplicateKeys(): Tried to merge two objects with the ' +
+      'same key: `x`. This conflict may be due to a mixin; in particular, ' +
+      'this may be caused by two getInitialState() or getDefaultProps() ' +
+      'methods returning objects with clashing keys.'
     );
   });
 
@@ -279,10 +276,9 @@ describe('ReactClass-mixin', function() {
           return <span />;
         },
       });
-    }).toThrow(
-      'Invariant Violation: ReactClass: You are attempting to ' +
-      'define `abc` on your component more than once. This conflict may be ' +
-      'due to a mixin.'
+    }).toThrowError(
+      'ReactClass: You are attempting to define `abc` on your component more ' +
+      'than once. This conflict may be due to a mixin.'
     );
   });
 
@@ -308,10 +304,9 @@ describe('ReactClass-mixin', function() {
           return <span />;
         },
       });
-    }).toThrow(
-      'Invariant Violation: ReactClass: You are attempting to ' +
-      'define `abc` on your component more than once. This conflict may be ' +
-      'due to a mixin.'
+    }).toThrowError(
+      'ReactClass: You are attempting to define `abc` on your component ' +
+      'more than once. This conflict may be due to a mixin.'
     );
   });
 
@@ -324,9 +319,9 @@ describe('ReactClass-mixin', function() {
           return <span />;
         },
       });
-    }).toThrow(
-      'Invariant Violation: ReactClass: You\'re attempting to ' +
-      'use a component as a mixin. Instead, just use a regular object.'
+    }).toThrowError(
+      'ReactClass: You\'re attempting to use a component as a mixin. ' +
+      'Instead, just use a regular object.'
     );
   });
 
@@ -345,9 +340,9 @@ describe('ReactClass-mixin', function() {
           return <span />;
         },
       });
-    }).toThrow(
-      'Invariant Violation: ReactClass: You\'re attempting to ' +
-      'use a component class as a mixin. Instead, just use a regular object.'
+    }).toThrowError(
+      'ReactClass: You\'re attempting to use a component class or function ' +
+      'as a mixin. Instead, just use a regular object.'
     );
   });
 
@@ -371,8 +366,7 @@ describe('ReactClass-mixin', function() {
     instance = ReactTestUtils.renderIntoDocument(instance);
   });
 
-  it('should include the mixin keys in even if their values are falsy',
-      function() {
+  it('should include the mixin keys in even if their values are falsy', function() {
     var mixin = {
       keyWithNullValue: null,
       randomCounter: 0,

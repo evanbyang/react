@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -18,17 +18,17 @@ describe('ReactDOMProduction', function() {
   var ReactDOM;
 
   beforeEach(function() {
-    __DEV__ = true;
+    __DEV__ = false;
     oldProcess = process;
     global.process = {env: {NODE_ENV: 'production'}};
 
-    require('mock-modules').dumpCache();
+    jest.resetModuleRegistry();
     React = require('React');
     ReactDOM = require('ReactDOM');
   });
 
   afterEach(function() {
-    __DEV__ = false;
+    __DEV__ = true;
     global.process = oldProcess;
   });
 
@@ -37,7 +37,7 @@ describe('ReactDOMProduction', function() {
 
     spyOn(console, 'error');
     warning(false, 'Do cows go moo?');
-    expect(console.error.argsForCall.length).toBe(0);
+    expect(console.error.calls.count()).toBe(0);
   });
 
   it('should use prod React', function() {
@@ -46,7 +46,7 @@ describe('ReactDOMProduction', function() {
     // no key warning
     void <div>{[<span />]}</div>;
 
-    expect(console.error.argsForCall.length).toBe(0);
+    expect(console.error.calls.count()).toBe(0);
   });
 
   it('should handle a simple flow', function() {

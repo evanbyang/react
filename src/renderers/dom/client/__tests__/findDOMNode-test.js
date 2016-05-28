@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -37,10 +37,9 @@ describe('findDOMNode', function() {
   it('findDOMNode should reject random objects', function() {
     expect(function() {
       ReactDOM.findDOMNode({foo: 'bar'});
-    })
-      .toThrow('Invariant Violation: Element appears to be neither ' +
-        'ReactComponent nor DOMNode (keys: foo)'
-      );
+    }).toThrowError(
+      'Element appears to be neither ReactComponent nor DOMNode (keys: foo)'
+    );
   });
 
   it('findDOMNode should reject unmounted objects with render func', function() {
@@ -54,9 +53,22 @@ describe('findDOMNode', function() {
     var inst = ReactDOM.render(<Foo />, container);
     ReactDOM.unmountComponentAtNode(container);
 
-    expect(() => ReactDOM.findDOMNode(inst)).toThrow(
-      'Invariant Violation: findDOMNode was called on an unmounted component.'
+    expect(() => ReactDOM.findDOMNode(inst)).toThrowError(
+      'findDOMNode was called on an unmounted component.'
     );
+  });
+
+  it('findDOMNode should not throw an error when called within a component that is not mounted', function() {
+    var Bar = React.createClass({
+      componentWillMount: function() {
+        expect(ReactDOM.findDOMNode(this)).toBeNull();
+      },
+      render: function() {
+        return <div/>;
+      },
+    });
+
+    expect(() => ReactTestUtils.renderIntoDocument(<Bar/>)).not.toThrow();
   });
 
 });

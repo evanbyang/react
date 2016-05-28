@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -7,7 +7,6 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @providesModule ReactReconcileTransaction
- * @typechecks static-only
  */
 
 'use strict';
@@ -15,11 +14,9 @@
 var CallbackQueue = require('CallbackQueue');
 var PooledClass = require('PooledClass');
 var ReactBrowserEventEmitter = require('ReactBrowserEventEmitter');
-var ReactDOMFeatureFlags = require('ReactDOMFeatureFlags');
 var ReactInputSelection = require('ReactInputSelection');
 var Transaction = require('Transaction');
 
-var assign = require('Object.assign');
 
 /**
  * Ensures that, when possible, the selection range (currently selected text
@@ -64,7 +61,7 @@ var EVENT_SUPPRESSION = {
 
 /**
  * Provides a queue for collecting `componentDidMount` and
- * `componentDidUpdate` callbacks during the the transaction.
+ * `componentDidUpdate` callbacks during the transaction.
  */
 var ON_DOM_READY_QUEUEING = {
   /**
@@ -107,17 +104,16 @@ var TRANSACTION_WRAPPERS = [
  *
  * @class ReactReconcileTransaction
  */
-function ReactReconcileTransaction(forceHTML) {
+function ReactReconcileTransaction(useCreateElement) {
   this.reinitializeTransaction();
   // Only server-side rendering really needs this option (see
   // `ReactServerRendering`), but server-side uses
   // `ReactServerRenderingTransaction` instead. This option is here so that it's
   // accessible and defaults to false when `ReactDOMComponent` and
-  // `ReactTextComponent` checks it in `mountComponent`.`
+  // `ReactDOMTextComponent` checks it in `mountComponent`.`
   this.renderToStaticMarkup = false;
   this.reactMountReady = CallbackQueue.getPooled(null);
-  this.useCreateElement =
-    !forceHTML && ReactDOMFeatureFlags.useCreateElement;
+  this.useCreateElement = useCreateElement;
 }
 
 var Mixin = {
@@ -140,6 +136,19 @@ var Mixin = {
   },
 
   /**
+   * Save current transaction state -- if the return value from this method is
+   * passed to `rollback`, the transaction will be reset to that state.
+   */
+  checkpoint: function() {
+    // reactMountReady is the our only stateful wrapper
+    return this.reactMountReady.checkpoint();
+  },
+
+  rollback: function(checkpoint) {
+    this.reactMountReady.rollback(checkpoint);
+  },
+
+  /**
    * `PooledClass` looks for this, and will invoke this before allowing this
    * instance to be reused.
    */
@@ -150,7 +159,7 @@ var Mixin = {
 };
 
 
-assign(ReactReconcileTransaction.prototype, Transaction.Mixin, Mixin);
+Object.assign(ReactReconcileTransaction.prototype, Transaction.Mixin, Mixin);
 
 PooledClass.addPoolingTo(ReactReconcileTransaction);
 

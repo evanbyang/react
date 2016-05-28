@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -11,40 +11,25 @@
 
 'use strict';
 
-var React = require('React');
-var instantiateReactComponent = require('instantiateReactComponent');
-
 describe('Danger', function() {
 
   describe('dangerouslyRenderMarkup', function() {
     var Danger;
-    var transaction;
 
     beforeEach(function() {
-      require('mock-modules').dumpCache();
+      jest.resetModuleRegistry();
       Danger = require('Danger');
-
-      var ReactReconcileTransaction = require('ReactReconcileTransaction');
-      transaction = new ReactReconcileTransaction(/* forceHTML */ true);
     });
 
     it('should render markup', function() {
-      var markup = instantiateReactComponent(
-        <div />
-      ).mountComponent('.rX', transaction, {});
+      var markup = '<div data-reactid=".rX"></div>';
       var output = Danger.dangerouslyRenderMarkup([markup])[0];
 
       expect(output.nodeName).toBe('DIV');
     });
 
     it('should render markup with props', function() {
-      var markup = instantiateReactComponent(
-        <div className="foo" />
-      ).mountComponent(
-        '.rX',
-        transaction,
-        {}
-      );
+      var markup = '<div class="foo" data-reactid=".rX"></div>';
       var output = Danger.dangerouslyRenderMarkup([markup])[0];
 
       expect(output.nodeName).toBe('DIV');
@@ -52,9 +37,7 @@ describe('Danger', function() {
     });
 
     it('should render wrapped markup', function() {
-      var markup = instantiateReactComponent(
-        <th />
-      ).mountComponent('.rX', transaction, {});
+      var markup = '<th data-reactid=".rX"></th>';
       var output = Danger.dangerouslyRenderMarkup([markup])[0];
 
       expect(output.nodeName).toBe('TH');
@@ -95,19 +78,19 @@ describe('Danger', function() {
     it('should throw when rendering invalid markup', function() {
       expect(function() {
         Danger.dangerouslyRenderMarkup(['']);
-      }).toThrow(
-        'Invariant Violation: dangerouslyRenderMarkup(...): Missing markup.'
+      }).toThrowError(
+        'dangerouslyRenderMarkup(...): Missing markup.'
       );
 
       spyOn(console, 'error');
 
       var renderedMarkup = Danger.dangerouslyRenderMarkup(['<p></p><p></p>']);
-      var args = console.error.argsForCall[0];
+      var args = console.error.calls.argsFor(0);
 
       expect(renderedMarkup.length).toBe(1);
       expect(renderedMarkup[0].nodeName).toBe('P');
 
-      expect(console.error.argsForCall.length).toBe(1);
+      expect(console.error.calls.count()).toBe(1);
 
       expect(args.length).toBe(2);
       expect(args[0]).toBe('Danger: Discarding unexpected node:');
