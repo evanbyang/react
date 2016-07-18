@@ -275,4 +275,3 @@ describe('ref swapping', function() {
     __DEV__ = originalDev;
   });
 });
-

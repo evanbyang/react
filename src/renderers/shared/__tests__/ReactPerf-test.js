@@ -445,4 +445,71 @@ describe('ReactPerf', function() {
     ReactPerf.stop();
     expect(ReactPerf.isRunning()).toBe(false);
   });
+
+  it('should print console error only once', () => {
+    __DEV__ = false;
+
+    spyOn(console, 'error');
+
+    expect(ReactPerf.getLastMeasurements()).toEqual([]);
+    expect(ReactPerf.getExclusive()).toEqual([]);
+    expect(ReactPerf.getInclusive()).toEqual([]);
+    expect(ReactPerf.getWasted()).toEqual([]);
+    expect(ReactPerf.getOperations()).toEqual([]);
+    expect(ReactPerf.printExclusive()).toEqual(undefined);
+    expect(ReactPerf.printInclusive()).toEqual(undefined);
+    expect(ReactPerf.printWasted()).toEqual(undefined);
+    expect(ReactPerf.printOperations()).toEqual(undefined);
+    expect(ReactPerf.start()).toBe(undefined);
+    expect(ReactPerf.stop()).toBe(undefined);
+    expect(ReactPerf.isRunning()).toBe(false);
+
+    expect(console.error.calls.count()).toBe(1);
+
+    __DEV__ = true;
+  });
+
+  it('should work when measurement starts during reconciliation', () => {
+    // https://github.com/facebook/react/issues/6949#issuecomment-230371009
+    var Measurer = React.createClass({
+      componentWillMount() {
+        ReactPerf.start();
+      },
+      componentDidMount() {
+        ReactPerf.stop();
+      },
+      componentWillUpdate() {
+        ReactPerf.start();
+      },
+      componentDidUpdate() {
+        ReactPerf.stop();
+      },
+      render() {
+        // Force reconciliation despite constant element
+        return React.cloneElement(this.props.children);
+      },
+    });
+
+    var container = document.createElement('div');
+    ReactDOM.render(<Measurer><App /></Measurer>, container);
+    expect(ReactPerf.getWasted()).toEqual([]);
+
+    ReactDOM.render(<Measurer><App /></Measurer>, container);
+    expect(ReactPerf.getWasted()).toEqual([{
+      key: 'Measurer',
+      instanceCount: 1,
+      inclusiveRenderDuration: 4,
+      renderCount: 1,
+    }, {
+      key: 'App',
+      instanceCount: 1,
+      inclusiveRenderDuration: 3,
+      renderCount: 1,
+    }, {
+      key: 'App > Box',
+      instanceCount: 2,
+      inclusiveRenderDuration: 2,
+      renderCount: 2,
+    }]);
+  });
 });

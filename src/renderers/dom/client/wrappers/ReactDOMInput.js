@@ -22,7 +22,6 @@ var warning = require('warning');
 
 var didWarnValueLink = false;
 var didWarnCheckedLink = false;
-var didWarnValueNull = false;
 var didWarnValueDefaultValue = false;
 var didWarnCheckedDefaultChecked = false;
 var didWarnControlledToUncontrolled = false;
@@ -35,17 +34,9 @@ function forceUpdateIfMounted() {
   }
 }
 
-function warnIfValueIsNull(props) {
-  if (props != null && props.value === null && !didWarnValueNull) {
-    warning(
-      false,
-      '`value` prop on `input` should not be null. ' +
-      'Consider using the empty string to clear the component or `undefined` ' +
-      'for uncontrolled components.'
-    );
-
-    didWarnValueNull = true;
-  }
+function isControlled(props) {
+  var usesChecked = props.type === 'checkbox' || props.type === 'radio';
+  return usesChecked ? props.checked !== undefined : props.value !== undefined;
 }
 
 /**
@@ -73,6 +64,9 @@ var ReactDOMInput = {
       // Make sure we set .type before any other properties (setting .value
       // before .type means .value is lost in IE11 and below)
       type: undefined,
+      // Make sure we set .step before .value (setting .value before .step
+      // means .value is rounded on mount, based upon step precision)
+      step: undefined,
     }, DisabledInputUtils.getHostProps(inst, props), {
       defaultChecked: undefined,
       defaultValue: undefined,
@@ -144,7 +138,6 @@ var ReactDOMInput = {
         );
         didWarnValueDefaultValue = true;
       }
-      warnIfValueIsNull(props);
     }
 
     var defaultValue = props.defaultValue;
@@ -156,7 +149,7 @@ var ReactDOMInput = {
     };
 
     if (__DEV__) {
-      inst._wrapperState.controlled = props.checked !== undefined || props.value !== undefined;
+      inst._wrapperState.controlled = isControlled(props);
     }
   },
 
@@ -164,16 +157,10 @@ var ReactDOMInput = {
     var props = inst._currentElement.props;
 
     if (__DEV__) {
-      warnIfValueIsNull(props);
-
-      var defaultValue = props.defaultChecked || props.defaultValue;
-      var controlled = props.checked !== undefined || props.value !== undefined;
+      var controlled = isControlled(props);
       var owner = inst._currentElement._owner;
 
-      if (
-        !inst._wrapperState.controlled &&
-        controlled && !didWarnUncontrolledToControlled
-      ) {
+      if (!inst._wrapperState.controlled && controlled && !didWarnUncontrolledToControlled) {
         warning(
           false,
           '%s is changing an uncontrolled input of type %s to be controlled. ' +
@@ -185,11 +172,7 @@ var ReactDOMInput = {
         );
         didWarnUncontrolledToControlled = true;
       }
-      if (
-        inst._wrapperState.controlled &&
-        (defaultValue || !controlled) &&
-        !didWarnControlledToUncontrolled
-      ) {
+      if (inst._wrapperState.controlled && !controlled && !didWarnControlledToUncontrolled) {
         warning(
           false,
           '%s is changing a controlled input of type %s to be uncontrolled. ' +
@@ -236,10 +219,20 @@ var ReactDOMInput = {
   },
 
   postMountWrapper: function(inst) {
+    var props = inst._currentElement.props;
+
     // This is in postMount because we need access to the DOM node, which is not
     // available until after the component has mounted.
     var node = ReactDOMComponentTree.getNodeFromInstance(inst);
-    node.value = node.value; // Detach value from defaultValue
+
+    // Detach value from defaultValue. We won't do anything if we're working on
+    // submit or reset inputs as those values & defaultValues are linked. They
+    // are not resetable nodes so this operation doesn't matter and actually
+    // removes browser-default values (eg "Submit Query") when no value is
+    // provided.
+    if (props.type !== 'submit' && props.type !== 'reset') {
+      node.value = node.value;
+    }
 
     // Normally, we'd just do `node.checked = node.checked` upon initial mount, less this bug
     // this is needed to work around a chrome bug where setting defaultChecked
@@ -247,10 +240,14 @@ var ReactDOMInput = {
     // Reference: https://bugs.chromium.org/p/chromium/issues/detail?id=608416
     // We need to temporarily unset name to avoid disrupting radio button groups.
     var name = node.name;
-    node.name = undefined;
+    if (name !== '') {
+      node.name = '';
+    }
     node.defaultChecked = !node.defaultChecked;
     node.defaultChecked = !node.defaultChecked;
-    node.name = name;
+    if (name !== '') {
+      node.name = name;
+    }
   },
 };
 

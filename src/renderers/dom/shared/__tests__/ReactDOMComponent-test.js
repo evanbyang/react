@@ -163,6 +163,17 @@ describe('ReactDOMComponent', function() {
       );
     });
 
+    it('should group multiple unknown prop warnings together', function() {
+      spyOn(console, 'error');
+      var container = document.createElement('div');
+      ReactDOM.render(<div foo="bar" baz="qux" />, container);
+      expect(console.error.calls.count(0)).toBe(1);
+      expect(normalizeCodeLocInfo(console.error.calls.argsFor(0)[0])).toBe(
+        'Warning: Unknown props `foo`, `baz` on <div> tag. Remove these props from the element. ' +
+        'For details, see https://fb.me/react-unknown-prop\n    in div (at **)'
+      );
+    });
+
     it('should warn for onDblClick prop', function() {
       spyOn(console, 'error');
       var container = document.createElement('div');
@@ -171,49 +182,6 @@ describe('ReactDOMComponent', function() {
       expect(normalizeCodeLocInfo(console.error.calls.argsFor(0)[0])).toBe(
         'Warning: Unknown event handler property onDblClick. Did you mean `onDoubleClick`?\n    in div (at **)'
       );
-    });
-
-
-    it('should warn about styles with numeric string values for non-unitless properties', function() {
-      spyOn(console, 'error');
-
-      var div = document.createElement('div');
-      var One = React.createClass({
-        render: function() {
-          return this.props.inline ?
-            <span style={{fontSize: '1'}} /> :
-            <div style={{fontSize: '1'}} />;
-        },
-      });
-      var Two = React.createClass({
-        render: function() {
-          return <div style={{fontSize: '1'}} />;
-        },
-      });
-      ReactDOM.render(<One inline={false} />, div);
-      expect(console.error.calls.count()).toBe(1);
-      expect(console.error.calls.argsFor(0)[0]).toBe(
-        'Warning: a `div` tag (owner: `One`) was passed a numeric string value ' +
-        'for CSS property `fontSize` (value: `1`) which will be treated ' +
-        'as a unitless number in a future version of React.'
-      );
-
-      // Don't warn again for the same component
-      ReactDOM.render(<One inline={true} />, div);
-      expect(console.error.calls.count()).toBe(1);
-
-      // Do warn for different components
-      ReactDOM.render(<Two />, div);
-      expect(console.error.calls.count()).toBe(2);
-      expect(console.error.calls.argsFor(1)[0]).toBe(
-        'Warning: a `div` tag (owner: `Two`) was passed a numeric string value ' +
-        'for CSS property `fontSize` (value: `1`) which will be treated ' +
-        'as a unitless number in a future version of React.'
-      );
-
-      // Really don't warn again for the same component
-      ReactDOM.render(<One inline={true} />, div);
-      expect(console.error.calls.count()).toBe(2);
     });
 
     it('should not warn for "0" as a unitless style value', function() {
@@ -225,7 +193,7 @@ describe('ReactDOMComponent', function() {
       });
 
       ReactTestUtils.renderIntoDocument(<Component />);
-      expect(console.error.calls.length).toBe(0);
+      expect(console.error.calls.count()).toBe(0);
     });
 
     it('should warn nicely about NaN in style', function() {
@@ -766,6 +734,26 @@ describe('ReactDOMComponent', function() {
       };
     });
 
+    it('should work error event on <source> element', function() {
+      spyOn(console, 'error');  
+      var container = document.createElement('div');
+      ReactDOM.render(
+        <video>
+          <source src="http://example.org/video" type="video/mp4" onError={(e) => console.error('onError called')} />
+        </video>,
+        container
+      );
+
+      var errorEvent = document.createEvent('Event');
+      errorEvent.initEvent('error', false, false);
+      container.getElementsByTagName('source')[0].dispatchEvent(errorEvent);
+
+      expect(console.error.calls.count()).toBe(1);
+      expect(console.error.calls.argsFor(0)[0]).toContain(
+        'onError called'
+      );
+    });
+
     it('should not duplicate uppercased selfclosing tags', function() {
       var Container = React.createClass({
         render: function() {
@@ -782,8 +770,8 @@ describe('ReactDOMComponent', function() {
       expect(function() {
         ReactDOM.render(<input>children</input>, container);
       }).toThrowError(
-        'input is a void element tag and must not have `children` or ' +
-        'use `props.dangerouslySetInnerHTML`.'
+        'input is a void element tag and must neither have `children` nor ' +
+        'use `dangerouslySetInnerHTML`.'
       );
     });
 
@@ -796,8 +784,8 @@ describe('ReactDOMComponent', function() {
           container
         );
       }).toThrowError(
-        'input is a void element tag and must not have `children` or use ' +
-        '`props.dangerouslySetInnerHTML`.'
+        'input is a void element tag and must neither have `children` nor use ' +
+        '`dangerouslySetInnerHTML`.'
       );
     });
 
@@ -811,8 +799,8 @@ describe('ReactDOMComponent', function() {
       expect(function() {
         ReactDOM.render(<menu><menuitem>children</menuitem></menu>, container);
       }).toThrowError(
-        'menuitem is a void element tag and must not have `children` or use ' +
-        '`props.dangerouslySetInnerHTML`.'
+        'menuitem is a void element tag and must neither have `children` nor use ' +
+        '`dangerouslySetInnerHTML`.'
       );
 
     });
@@ -966,8 +954,8 @@ describe('ReactDOMComponent', function() {
       expect(function() {
         ReactDOM.render(<X />, container);
       }).toThrowError(
-        'input is a void element tag and must not have `children` ' +
-        'or use `props.dangerouslySetInnerHTML`. Check the render method of X.'
+        'input is a void element tag and must neither have `children` ' +
+        'nor use `dangerouslySetInnerHTML`. Check the render method of X.'
       );
     });
 
@@ -996,8 +984,8 @@ describe('ReactDOMComponent', function() {
       expect(function() {
         ReactDOM.render(<input>children</input>, container);
       }).toThrowError(
-        'input is a void element tag and must not have `children` or use ' +
-        '`props.dangerouslySetInnerHTML`.'
+        'input is a void element tag and must neither have `children` nor use ' +
+        '`dangerouslySetInnerHTML`.'
       );
     });
 
@@ -1010,8 +998,8 @@ describe('ReactDOMComponent', function() {
           container
         );
       }).toThrowError(
-        'input is a void element tag and must not have `children` or use ' +
-        '`props.dangerouslySetInnerHTML`.'
+        'input is a void element tag and must neither have `children` nor use ' +
+        '`dangerouslySetInnerHTML`.'
       );
     });
 

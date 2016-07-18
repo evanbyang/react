@@ -11,11 +11,26 @@
 
 'use strict';
 
-var ReactComponentTreeDevtool = require('ReactComponentTreeDevtool');
 var ReactPropTypeLocationNames = require('ReactPropTypeLocationNames');
+var ReactPropTypesSecret = require('ReactPropTypesSecret');
 
 var invariant = require('invariant');
 var warning = require('warning');
+
+var ReactComponentTreeDevtool;
+
+if (
+  typeof process !== 'undefined' &&
+  process.env &&
+  process.env.NODE_ENV === 'test'
+) {
+  // Temporary hack.
+  // Inline requires don't work well with Jest:
+  // https://github.com/facebook/react/issues/7240
+  // Remove the inline requires when we don't need them anymore:
+  // https://github.com/facebook/react/pull/7178
+  ReactComponentTreeDevtool = require('ReactComponentTreeDevtool')
+}
 
 var loggedTypeFailures = {};
 
@@ -49,7 +64,7 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
           ReactPropTypeLocationNames[location],
           typeSpecName
         );
-        error = typeSpecs[typeSpecName](values, typeSpecName, componentName, location);
+        error = typeSpecs[typeSpecName](values, typeSpecName, componentName, location, null, ReactPropTypesSecret);
       } catch (ex) {
         error = ex;
       }
@@ -72,10 +87,15 @@ function checkReactTypeSpec(typeSpecs, values, location, componentName, element,
 
         var componentStackInfo = '';
 
-        if (debugID !== null) {
-          componentStackInfo = ReactComponentTreeDevtool.getStackAddendumByID(debugID);
-        } else if (element !== null) {
-          componentStackInfo = ReactComponentTreeDevtool.getCurrentStackAddendum(element);
+        if (__DEV__) {
+          if (!ReactComponentTreeDevtool) {
+            ReactComponentTreeDevtool = require('ReactComponentTreeDevtool');
+          }
+          if (debugID !== null) {
+            componentStackInfo = ReactComponentTreeDevtool.getStackAddendumByID(debugID);
+          } else if (element !== null) {
+            componentStackInfo = ReactComponentTreeDevtool.getCurrentStackAddendum(element);
+          }
         }
 
         warning(
